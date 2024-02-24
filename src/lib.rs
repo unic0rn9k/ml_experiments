@@ -16,3 +16,13 @@ pub mod decoder;
 pub use candle_core;
 pub use candle_nn;
 pub use rust_bert;
+
+pub fn argmax(x: &[f32]) -> usize{
+    let mut i = 0;
+    for (j, k) in x.iter().copied().enumerate(){
+        if k > x[i]{
+            i = j
+        }
+    }
+    i
+}

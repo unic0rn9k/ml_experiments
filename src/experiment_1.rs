@@ -86,3 +86,50 @@ pub fn simple_llm() -> (impl Fn(&Tensor, usize)->Tensor, Vec<Var>){
         vars
     )
 }
+
+pub fn main() -> Result<()>{
+    let (decoder, vars) = experiment_1::simple_llm();
+    let dev = Device::Cpu;
+
+    let mut opt = AdamW::new_lr(vars, 0.01)?;
+
+    let mut file = BufReader::new(File::open("tiny-shakespeare.txt")?).lines();
+    let mut cost_sum = 0.;
+    for n in 0..{
+        let line = file.next().expect("EOF")?;
+        let tokens1 = line.as_bytes();
+
+        let line = file.next().expect("EOF")?;
+        let tokens2 = line.as_bytes();
+        let seqdy = tokens2.len();
+        let seqdx = tokens1.len();
+
+        if seqdx < 2 || seqdy < 2{
+            continue
+        }
+
+        let ys = Tensor::new(tokens2, &dev)?;
+        let tokens = Tensor::new(tokens1, &dev)?;
+
+        //let ys = one_hot(ys, 255, 1., 0.).unwrap();
+
+        let yhat = (decoder)(&tokens, seqdy);
+
+        let log_sm = log_softmax(&yhat, D::Minus1)?;
+
+        let loss = loss::nll(&log_sm, &ys).unwrap();
+        cost_sum += loss.to_scalar::<f32>().unwrap();
+        opt.backward_step(&loss).unwrap();
+
+        if n % 100 == 0{
+            println!("{n}: {}", cost_sum/n as f32);
+            for row in yhat.to_vec2().unwrap(){
+                print!("{}", argmax(&row) as u8 as char)
+            }
+            println!();
+            cost_sum = 0.;
+        }
+    }
+
+    Ok(())
+}
