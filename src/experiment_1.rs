@@ -31,7 +31,7 @@ impl RecoderBlock {
         Ok(Self {
             tokenizer: (0..RECODERS).map(|n| linear(RECODERD, EMBD, vs.pp(format!("recoder_token_{n}"))).unwrap() ).collect(),
             pos: Var::randn(0f32, 1f32, (RECODERS, EMBD), vs.device()).unwrap(),
-            decoder: DecoderBlock::new(vs.pp("decoder")).unwrap(), // TODO: Optionally ommit tril-mask
+            decoder: DecoderBlock::new(vs.pp("decoder"), DecoderConfig::default()).unwrap(), // TODO: Optionally ommit tril-mask
             proj: linear(EMBD, RECODERD, vs.pp("recoder_out_projection")).unwrap(),
         })
     }
@@ -63,13 +63,13 @@ pub fn simple_llm() -> (impl Fn(&Tensor, usize)->Tensor, Vec<Var>){
 
     let wtf: Vec<_> = (0..300).map(|n| linear(RECODERD, EMBD, vs.pp(format!("wtf_{n}"))).unwrap()).collect();
     let unwtf = linear(EMBD, RECODERD, vs.pp("unwtf")).unwrap();
-    let out_decoder = DecoderBlock::new(vs.pp("final_output_decoder")).unwrap();
+    let out_decoder = DecoderBlock::new(vs.pp("final_output_decoder"), DecoderConfig::default()).unwrap();
     let fin_tok = linear(EMBD, 255, vs.pp("fintok")).unwrap();
 
     let mut vars = varmap.all_vars();
     vars.push(embeddings.clone());
 
-    let decoder_in = DecoderBlock::new(vs.pp("initial_input_decoder")).unwrap();
+    let decoder_in = DecoderBlock::new(vs.pp("initial_input_decoder"), DecoderConfig::default()).unwrap();
 
     (
         move |xs: &Tensor, seqdy|{

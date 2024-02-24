@@ -1,20 +1,32 @@
 //! # Basic decoder block
-//! - [ ] Optional tril mask
+//! - [X] Optional tril mask
 //! - [ ] Positional embeddings
 //! - [ ] Multiple hheads
 
 use crate::*;
+
+pub struct DecoderConfig{
+    pub tril: bool,
+}
+
+impl Default for DecoderConfig{
+    fn default() -> Self {
+        Self { tril: true }
+    }
+}
 
 pub struct DecoderBlock{
     wk: Linear,
     wq: Linear,
     wv: Linear,
     proj: Linear,
+    conf: DecoderConfig
 }
 
 impl DecoderBlock{
-    pub fn new(vs: VarBuilder) -> Result<Self>{
+    pub fn new(vs: VarBuilder, conf: DecoderConfig) -> Result<Self>{
         Ok(Self {
+            conf,
             wk: linear_no_bias(EMBD, HEADD, vs.pp("wk"))?,
             wq: linear_no_bias(EMBD, HEADD, vs.pp("wq"))?,
             wv: linear_no_bias(EMBD, HEADD, vs.pp("wv"))?,
@@ -38,7 +50,7 @@ impl Module for DecoderBlock{
 
         let tril = Tensor::from_vec(tril.to_vec2().unwrap().into_iter().flatten().map(|n: f32| if n == 0.{-f32::INFINITY}else{0.} ).collect(), tril.shape(), dev).unwrap();
 
-        let bruh = (tril + scores).unwrap();
+        let bruh = if self.conf.tril { (tril + scores).unwrap() }else{ scores };
         let scores = softmax(&bruh, D::Minus1).unwrap();
         //println!("bruh: {:?}", bruh.to_vec2::<f32>());
         //println!();
@@ -52,7 +64,7 @@ impl Module for DecoderBlock{
 }
 
 pub fn simple_llm(vs: VarBuilder) -> impl Module{
-    (0..3).map(|n| seq().add(DecoderBlock::new(vs.pp(format!("decoder_block_{n}"))).unwrap()).add(|xs: &Tensor| xs.tanh()))
+    (0..3).map(|n| seq().add(DecoderBlock::new(vs.pp(format!("decoder_block_{n}")), DecoderConfig::default()).unwrap()).add(|xs: &Tensor| xs.relu()))
         .fold(seq(), |s, n| s.add(move |xs: &Tensor| (n.forward(xs) + xs).unwrap() * 0.5 ) )
         .add(linear(EMBD, 255, vs.pp("output projection")).unwrap())
 }
