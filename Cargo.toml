@@ -1,0 +1,16 @@
+[package]
+name = "ml_experiments"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.79"
+#candle-core = { version = "0.3.3", features = ["cuda"] }
+#candle-nn = "0.3.3"
+candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.3.3" }#, features = ["cuda"] }
+#candle-flash-attn = { git = "https://github.com/huggingface/candle.git", version = "0.4.0" }
+candle-nn = { git = "https://github.com/huggingface/candle.git", version = "0.3.3" }
+rust-bert = { version = "0.22.0", features = ["download-libtorch"] }
+
+[workspace]
+members = ["crates/*"]

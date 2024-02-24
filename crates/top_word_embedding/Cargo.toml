@@ -1,0 +1,8 @@
+[package]
+name = "top_word_embedding"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kdtree = "0.7.0"
+ml_experiments = {path = "../..", version = "*"}
