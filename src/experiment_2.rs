@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use anyhow::{Error as E, Result, bail};
-use candle_core::{Device, DType, Tensor, Module};
+use candle_core::{Device, DType, Tensor, Module, D};
 
 use candle_transformers::models::bert::{BertModel, Config};
 
 mod token_output_stream;
 use token_output_stream::TokenOutputStream;
 
-use candle_nn::{VarBuilder, Linear, linear, VarMap, AdamW, encoding::one_hot, loss::mse, Optimizer};
+use candle_nn::{VarBuilder, Linear, linear, VarMap, AdamW, encoding::one_hot, loss::{mse, self}, Optimizer, ops::log_softmax};
 use candle_transformers::generation::LogitsProcessor;
 use hf_hub::{api::sync::Api, Repo, RepoType};
 use tokenizers::Tokenizer;
@@ -67,31 +67,39 @@ pub fn main() -> Result<()> {
     let varmap = VarMap::new();
     let vs = VarBuilder::from_varmap(&varmap, DType::F32, &device);
 
-    let linear = linear(384, 30522, vs).unwrap();
-    let mut optimizer = AdamW::new_lr(varmap.all_vars(), 0.1).unwrap();
-    let target = one_hot(token_ids.squeeze(0)?, 30522, 1f32, 0f32).unwrap();
+    let linear = linear(384, 8, vs).unwrap();
+    let mut optimizer = AdamW::new_lr(varmap.all_vars(), 0.01).unwrap();
+    let target = one_hot(Tensor::arange(0i64, 8, &device).unwrap(), 8, 1f32, 0f32).unwrap();
 
-    for epoch in 0..100{
-        println!("epoch: {epoch}");
+    for epoch in 0..2000{
+        //println!("epoch: {epoch}");
         for i in 0..tokens.len(){
             let target = target.get(i)?;
 
-            let out = linear.forward(&output.get(i)?.unsqueeze(0)?).unwrap().squeeze(0)?;
+            let out = linear.forward(&output.get(i)?.unsqueeze(0)?).unwrap().squeeze(0).unwrap();
+
+            //println!("{out:?}");
+            //println!("{target:?}");
 
             let loss = mse(&out, &target).unwrap();
             optimizer.backward_step(&loss).unwrap();
         }
     }
 
-    let reverse_vocab: HashMap<u32, String> = tokenizer.get_vocab(false).into_iter().map(|(tok, id)| (id, tok)).collect();
-    println!("vocab size: {}", reverse_vocab.len());
-
-    let out = linear.forward(&output)?;
     for i in 0..tokens.len(){
-        let token = out.get(i).unwrap().argmax(0).unwrap();
-        let token = tokenizer.id_to_token(token.to_scalar().unwrap());
-        println!("{token:?}")
+        let out: u32 = linear.forward(&output.get(i)?.unsqueeze(0)?).unwrap().squeeze(0).unwrap().argmax(0).unwrap().to_scalar().unwrap();
+        println!("{}", out)
     }
+
+    //let reverse_vocab: HashMap<u32, String> = tokenizer.get_vocab(false).into_iter().map(|(tok, id)| (id, tok)).collect();
+    //println!("vocab size: {}", reverse_vocab.len());
+
+    //let out = linear.forward(&output)?;
+    //for i in 0..tokens.len(){
+    //    let token = out.get(i).unwrap().argmax(0).unwrap();
+    //    let token = tokenizer.id_to_token(token.to_scalar().unwrap());
+    //    println!("{token:?}")
+    //}
 
     //let df = df!{
     //    ""

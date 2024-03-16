@@ -3,7 +3,7 @@ use top_word_embedding::*;
 const SAMPLE: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/sample.txt"));
 
 fn main(){
-    let emb = Embedder::new(TOP_250);
+    let emb = Embedder::new(TOP_1000);
 
     for line in SAMPLE.lines(){
         for word in line.split(" "){
