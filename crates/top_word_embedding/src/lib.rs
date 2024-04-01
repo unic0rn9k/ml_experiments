@@ -10,6 +10,9 @@ pub const TOP_1000: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/top1000.txt");
 pub const TOP_5000: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/top5000.txt");
 pub const TOP_2500: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/top2500.txt");
 pub const TOP_10000: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/top10000.txt");
+pub const TOP_37000: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/top37000.txt");
+pub const NOUNS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/words/nouns.txt");
+pub const VERBS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/words/verbs.txt");
 
 fn cart(a: &[f32], b: &[f32]) -> f32{
     a.iter().zip(b.iter()).map(|(a, b)| (a-b).powi(2) ).sum::<f32>().sqrt()

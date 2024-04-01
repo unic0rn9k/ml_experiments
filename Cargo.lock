@@ -485,6 +485,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98cc8fbded0c607b7ba9dd60cd98df59af97e84d24e49c8557331cfc26d301ce"
 
 [[package]]
+name = "clustering"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63fe0752079cf2d1c0a2b32ea19a7b4da0d49b8ec432d75924d8458409537c9d"
+dependencies = [
+ "rand",
+ "rayon",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1675,6 +1685,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.52",
+]
+
+[[package]]
+name = "morphological_tokenization"
+version = "0.1.0"
+dependencies = [
+ "clustering",
+ "ml_experiments",
+ "once_cell",
+ "rand",
 ]
 
 [[package]]
@@ -3804,6 +3824,13 @@ checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
 dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "wordsitter"
+version = "0.1.0"
+dependencies = [
+ "ml_experiments",
 ]
 
 [[package]]
