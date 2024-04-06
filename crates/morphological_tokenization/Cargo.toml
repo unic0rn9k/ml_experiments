@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 clustering = { version = "0.2.1", features = ["parallel"] }
+kmedoids = "0.5.1"
 ml_experiments = {path = "../..", version = "*"}
 once_cell = "1.19.0"
 rand = "0.8.5"

@@ -1498,6 +1498,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "kmedoids"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12ed919d18db3a2e9076533c9ea3f73180eb70033fc266a4fbc5c0a3cad2ea17"
+dependencies = [
+ "ndarray",
+ "num-traits",
+ "rand",
+ "rayon",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1660,8 +1672,10 @@ dependencies = [
  "candle-nn",
  "candle-transformers",
  "hf-hub",
+ "indicatif 0.17.8",
  "polars",
  "rust-bert",
+ "safetensors 0.4.2",
  "serde_json",
  "tokenizers",
 ]
@@ -1692,6 +1706,7 @@ name = "morphological_tokenization"
 version = "0.1.0"
 dependencies = [
  "clustering",
+ "kmedoids",
  "ml_experiments",
  "once_cell",
  "rand",

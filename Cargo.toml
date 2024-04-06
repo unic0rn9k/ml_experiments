@@ -17,6 +17,8 @@ rust-bert = { version = "0.22.0", features = ["download-libtorch"] }
 anyhow = "1.0.79"
 polars = "0.38.1"
 serde_json = "1.0.114"
+safetensors = "0.4.2"
+indicatif = "0.17.8"
 
 [workspace]
 members = ["crates/*"]

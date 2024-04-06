@@ -1,21 +1,51 @@
 #![feature(test)]
 
-use std::{io::{BufRead, BufReader}, fs::File, sync::{Mutex, Arc}, thread, collections::HashSet};
-use ml_experiments::rust_bert::pipelines::sentence_embeddings::{SentenceEmbeddingsBuilder, SentenceEmbeddingsModelType};
-use clustering::*;
+use std::{io::{BufRead, BufReader, Write}, fs::File, sync::Arc, thread, collections::HashSet, path::Path};
+use ml_experiments::{rust_bert::pipelines::sentence_embeddings::{SentenceEmbeddingsBuilder, SentenceEmbeddingsModelType}, safetensors::{Dtype, tensor::TensorView}};
+use kmedoids::arrayadapter::LowerTriangle;
+use ml_experiments::{indicatif::{ProgressBar, ProgressState, ProgressStyle}, safetensors};
 
 pub const TOP_37000: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/words/top37000.txt");
 
+fn dist(a: &[f32], b: &[f32]) -> f32{
+    a.iter().zip(b.iter()).map(|(a, b)| (a-b).powi(2)).sum::<f32>().sqrt()
+}
+
+fn dissimilarity(m: Vec<Vec<f32>>) -> LowerTriangle<f32>{
+    let rows = m.len();
+    let cols = m[0].len();
+    
+    let mut data = vec![];
+
+    for i in 0..rows{
+        for j in (i+1)..rows{
+            assert_eq!(m[i].len(), cols);
+            assert_eq!(m[j].len(), cols);
+
+            data.push(dist(&m[i], &m[j]))
+        }
+    }
+
+    LowerTriangle { n: rows, data }
+}
+
 fn main(){
-    println!("1. Reading");
+    println!("1.  Reading");
     let words: Arc<Vec<String>> = Arc::new(BufReader::new(File::open(TOP_37000).unwrap()).lines().map(|l| l.unwrap()).collect());
     
-    println!("2. Embedding");
+    println!("2.  Embedding");
+    let pb = ProgressBar::new(words.len() as u64);
+    pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        .unwrap()
+        .with_key("eta", |state: &ProgressState, w: &mut dyn std::fmt::Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+        .progress_chars("=> "));
+
     let mut handles = vec![];
     let batch_size = 200;
 
     for i in 0..8{
         let words = words.clone();
+        let pb = pb.clone();
         handles.push(thread::spawn(move ||{
 
             let model = Arc::new(SentenceEmbeddingsBuilder::remote(
@@ -28,21 +58,24 @@ fn main(){
                 if n > words.len()-batch_size{
                     break
                 }
-                ret.push(model.encode(&words[n..n+batch_size]).unwrap())
+                ret.push(model.encode(&words[n..n+batch_size]).unwrap());
+                pb.inc(1);
             }
             ret
         }))
     }
     let mut handles: Vec<_> = handles.into_iter().map(|h| h.join().unwrap().into_iter()).collect();
 
-    println!("2.5 Embedding synchronous");
-
-    let mut embeddings: Vec<Vec<f32>> = vec![];
+    let mut embeddings: Vec<f32> = vec![];
     let mut done: HashSet<usize> = (0..8).collect();
+    let mut n_embeds = 0;
     loop{
         for n in done.clone().iter(){
             match handles[*n].next(){
-                Some(mut some) => embeddings.append(&mut some),
+                Some(some) => for mut some in some{
+                    n_embeds += 1;
+                    embeddings.append(&mut some)
+                },
                 None => {done.remove(n);},
             }
         }
@@ -50,48 +83,22 @@ fn main(){
             break
         }
     }
+    pb.finish();
 
-    println!("3. Clustering");
+    println!("... Saving");
+    let num_bytes = std::mem::size_of::<f32>();
+    let data = TensorView::new(Dtype::F32, vec![n_embeds, embeddings.len() / n_embeds], unsafe{
+        std::slice::from_raw_parts(embeddings.as_ptr() as *const u8, embeddings.len() / num_bytes)
+    }).unwrap();
+    safetensors::serialize_to_file(vec![("embeddings", data)], &None, Path::new("embeddings.safetensors")).unwrap();
+
+    //println!("3.  Clustering");
+    //let dissim = dissimilarity(embeddings);
+    //let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+    //let (loss, assingment, n_iter, n_swap): (f32, _, _, _) = kmedoids::fasterpam(&dissim, &mut meds, 100);
     
-    let clustering = kmeans(800, &embeddings, 100);
+    //let clustering = kmeans(800, &embeddings, 100);
 
-    println!("membership: {:?}", clustering.membership);
-    println!("centroids : {:?}", clustering.centroids);
-}
-
-mod kmeans_bench{
-    use rand;
-    use once_cell::sync::Lazy;
-    extern crate test;
-    use test::bench::*;
-
-    static DATA: Lazy<Vec<Vec<f32>>> = Lazy::new(||{
-        let mut samples: Vec<Vec<f32>> = vec![];
-        for _ in 0..1000 {
-            samples.push((0..384).map(|_| rand::random()).collect::<Vec<_>>());
-        }
-        samples
-    });
-
-    #[bench]
-    fn clustering(b: &mut Bencher){
-        use clustering::*;
-        let samples = &*DATA;
-
-        b.iter(|| kmeans(100, &samples, 200))
-    }
-
-    use linfa::DatasetBase;
-    use linfa::traits::{Fit, FitWith, Predict};
-    use linfa_clustering::{KMeansParams, KMeans, IncrKMeansError};
-    use linfa_datasets::generate;
-    use ndarray::{Axis, array, s};
-    use ndarray_rand::rand::SeedableRng;
-    use rand_xoshiro::Xoshiro256Plus;
-    use approx::assert_abs_diff_eq;
-
-    #[bench]
-    fn linfa(b: &mut Bencher){
-        let observations = DatasetBase::from(DATA);
-    }
+    //println!("loss: {loss:?}");
+    //println!("assignment: {assingment:?}");
 }
