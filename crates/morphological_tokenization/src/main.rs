@@ -36,7 +36,7 @@ fn main(){
     println!("2.  Embedding");
 
     let batch_size = 200;
-    let threads = 12;
+    let threads = 2;
 
     let pb = ProgressBar::new((words.len()/batch_size) as u64);
     pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] ({eta})")
@@ -71,12 +71,10 @@ fn main(){
 
     let mut embeddings: Vec<f32> = vec![];
     let mut done: HashSet<usize> = (0..threads).collect();
-    let mut n_embeds = 0;
     loop{
         for n in done.clone().iter(){
             match handles[*n].next(){
                 Some(some) => for mut some in some{
-                    n_embeds += 1;
                     embeddings.append(&mut some)
                 },
                 None => {done.remove(n);},
@@ -88,12 +86,13 @@ fn main(){
     }
     pb.finish();
 
-    let embd = embeddings.len() / n_embeds;
+    let embd = 384;
+    let n_embeds = embeddings.len()/embd;
 
     println!("... Saving");
     let num_bytes = std::mem::size_of::<f32>();
     let data = TensorView::new(Dtype::F32, vec![n_embeds, embd], unsafe{
-        std::slice::from_raw_parts(embeddings.as_ptr() as *const u8, embeddings.len() / num_bytes)
+        std::slice::from_raw_parts(embeddings.as_ptr() as *const u8, embeddings.len() * num_bytes)
     }).unwrap();
     safetensors::serialize_to_file(vec![("embeddings", data)], &None, Path::new("embeddings.safetensors")).unwrap();
 
@@ -101,7 +100,7 @@ fn main(){
     let dissim = dissimilarity((0..n_embeds).map(|n| &embeddings[n*embd..(n+1)*embd] ).collect());
 
     println!("3.  Clustering");
-    let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+    let mut meds = kmedoids::random_initialization(n_embeds, 800, &mut rand::thread_rng());
     let (loss, assingment, n_iter, n_swap): (f32, _, _, _) = kmedoids::fasterpam(&dissim, &mut meds, 100);
     
     println!("loss: {loss:?}");
