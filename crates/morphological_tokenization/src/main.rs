@@ -11,7 +11,7 @@ fn dist(a: &[f32], b: &[f32]) -> f32{
     a.iter().zip(b.iter()).map(|(a, b)| (a-b).powi(2)).sum::<f32>().sqrt()
 }
 
-fn dissimilarity(m: Vec<Vec<f32>>) -> LowerTriangle<f32>{
+fn dissimilarity(m: Vec<&[f32]>) -> LowerTriangle<f32>{
     let rows = m.len();
     let cols = m[0].len();
     
@@ -85,20 +85,22 @@ fn main(){
     }
     pb.finish();
 
+    let embd = embeddings.len() / n_embeds;
+
     println!("... Saving");
     let num_bytes = std::mem::size_of::<f32>();
-    let data = TensorView::new(Dtype::F32, vec![n_embeds, embeddings.len() / n_embeds], unsafe{
+    let data = TensorView::new(Dtype::F32, vec![n_embeds, embd], unsafe{
         std::slice::from_raw_parts(embeddings.as_ptr() as *const u8, embeddings.len() / num_bytes)
     }).unwrap();
     safetensors::serialize_to_file(vec![("embeddings", data)], &None, Path::new("embeddings.safetensors")).unwrap();
 
-    //println!("3.  Clustering");
-    //let dissim = dissimilarity(embeddings);
-    //let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-    //let (loss, assingment, n_iter, n_swap): (f32, _, _, _) = kmedoids::fasterpam(&dissim, &mut meds, 100);
-    
-    //let clustering = kmeans(800, &embeddings, 100);
+    println!("4. Generating dissimilarity matrix");
+    let dissim = dissimilarity((0..n_embeds).map(|n| &embeddings[n*embd..(n+1)*embd] ).collect());
 
-    //println!("loss: {loss:?}");
-    //println!("assignment: {assingment:?}");
+    println!("3.  Clustering");
+    let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+    let (loss, assingment, n_iter, n_swap): (f32, _, _, _) = kmedoids::fasterpam(&dissim, &mut meds, 100);
+    
+    println!("loss: {loss:?}");
+    println!("assignment: {assingment:?}");
 }
