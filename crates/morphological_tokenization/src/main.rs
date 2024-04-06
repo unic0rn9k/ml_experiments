@@ -34,16 +34,19 @@ fn main(){
     let words: Arc<Vec<String>> = Arc::new(BufReader::new(File::open(TOP_37000).unwrap()).lines().map(|l| l.unwrap()).collect());
     
     println!("2.  Embedding");
-    let pb = ProgressBar::new(words.len() as u64);
+
+    let batch_size = 200;
+    let threads = 12;
+
+    let pb = ProgressBar::new((words.len()/batch_size) as u64);
     pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] ({eta})")
         .unwrap()
-        .with_key("eta", |state: &ProgressState, w: &mut dyn std::fmt::Write| write!(w, "{:.1}s", state.eta().as_secs_f64() as usize / 60).unwrap())
+        .with_key("eta", |state: &ProgressState, w: &mut dyn std::fmt::Write| write!(w, "{:.1} min", state.eta().as_secs_f64() as usize / 60).unwrap())
         .progress_chars("=> "));
 
     let mut handles = vec![];
-    let batch_size = 200;
 
-    for i in 0..8{
+    for i in 0..threads{
         let words = words.clone();
         let pb = pb.clone();
         handles.push(thread::spawn(move ||{
@@ -67,7 +70,7 @@ fn main(){
     let mut handles: Vec<_> = handles.into_iter().map(|h| h.join().unwrap().into_iter()).collect();
 
     let mut embeddings: Vec<f32> = vec![];
-    let mut done: HashSet<usize> = (0..8).collect();
+    let mut done: HashSet<usize> = (0..threads).collect();
     let mut n_embeds = 0;
     loop{
         for n in done.clone().iter(){
