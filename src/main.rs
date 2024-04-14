@@ -12,6 +12,7 @@ use candle_core::*;
 mod decoder;
 mod experiment_1;
 mod experiment_2;
+mod experiment_3;
 use decoder::*;
 
 const EMBD: usize = 100;
@@ -30,7 +31,7 @@ macro_rules! projects {
 }
 
 fn main(){
-    projects!(decoder, experiment_1, experiment_2);
+    projects!(decoder, experiment_1, experiment_2, experiment_3);
 }
 
 pub fn argmax(x: &[f32]) -> usize{

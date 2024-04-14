@@ -43,7 +43,8 @@ impl Module for DecoderBlock{
     /// batch x head x seqd x embd
     fn forward(&self, xs: &Tensor) -> Result<Tensor, Error>{
         let dev = xs.device();
-        let seqd = xs.shape().dims().iter().rev().skip(1).next().unwrap();
+        let [batch_size, seqd, embdd] = xs.dims() else {panic!("Too many dims")};
+        assert_eq!(*embdd, EMBD);
         let k = self.wk.forward(xs).unwrap();
         let q = self.wq.forward(xs).unwrap();
         let v = self.wv.forward(xs).unwrap();
@@ -55,7 +56,7 @@ impl Module for DecoderBlock{
 
         let tril = Tensor::from_vec(tril.to_vec2().unwrap().into_iter().flatten().map(|n: f32| if n == 0.{-f32::INFINITY}else{0.} ).collect(), tril.shape(), dev).unwrap();
 
-        let bruh = if self.conf.tril { (tril.repeat((40, 1, 1)) + scores).unwrap() }else{ scores };
+        let bruh = if self.conf.tril { (tril.repeat((*batch_size, 1, 1)) + scores).unwrap() }else{ scores };
         let scores = softmax(&bruh, D::Minus1).unwrap();
         //println!("bruh: {:?}", bruh.to_vec2::<f32>());
         //println!();
@@ -68,10 +69,10 @@ impl Module for DecoderBlock{
     }
 }
 
-pub fn simple_llm(vs: VarBuilder) -> impl Module{
+pub fn simple_llm(vs: VarBuilder, tkn: usize) -> impl Module{
     (0..3).map(|n| seq().add(DecoderBlock::new(vs.pp(format!("decoder_block_{n}")), DecoderConfig::default()).unwrap()).add(|xs: &Tensor| xs.relu()))
         .fold(seq(), |s, n| s.add(move |xs: &Tensor| (n.forward(xs) + xs).unwrap() * 0.5 ) )
-        .add(linear(EMBD, 255, vs.pp("output projection")).unwrap())
+        .add(linear(EMBD, tkn, vs.pp("output projection")).unwrap())
 }
 
 pub fn main() -> Result<()>{
@@ -82,7 +83,7 @@ pub fn main() -> Result<()>{
     let varmap = VarMap::new();
     let vs = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
 
-    let decoder = simple_llm(vs.clone());
+    let decoder = simple_llm(vs.clone(), 255);
 
     let embeddings = Var::randn(0f32, 1f32, (255, EMBD), &dev)?;
     
@@ -134,7 +135,6 @@ pub fn main() -> Result<()>{
                 print!("{}", argmax(&row) as u8 as char)
             }
             println!();
-            cost_sum = 0.;
         }
     }
 

@@ -1,4 +1,6 @@
 /target
 /journal/.obsidian
 /julia
+/speculation
 *.safetensors
+*.txt

@@ -18,6 +18,8 @@ pub use candle_nn;
 pub use rust_bert;
 pub use indicatif;
 pub use ::safetensors;
+pub use rayon;
+pub use memmap2;
 
 pub fn argmax(x: &[f32]) -> usize{
     let mut i = 0;

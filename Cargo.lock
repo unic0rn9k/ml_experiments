@@ -195,17 +195,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
-name = "bindgen_cuda"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "853f25ad4724e82569cc7dd3b08048d21bd15950208f8b0ceeab6ac062b33c1f"
-dependencies = [
- "glob",
- "num_cpus",
- "rayon",
-]
-
-[[package]]
 name = "bit-set"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -328,8 +317,6 @@ version = "0.4.2"
 source = "git+https://github.com/huggingface/candle.git#3318fe30fb3d8c3b92ba404a2a33de81c2731ad9"
 dependencies = [
  "byteorder",
- "candle-kernels",
- "cudarc",
  "gemm",
  "half",
  "memmap2 0.9.4",
@@ -342,14 +329,6 @@ dependencies = [
  "thiserror",
  "yoke",
  "zip",
-]
-
-[[package]]
-name = "candle-kernels"
-version = "0.4.2"
-source = "git+https://github.com/huggingface/candle.git#3318fe30fb3d8c3b92ba404a2a33de81c2731ad9"
-dependencies = [
- "bindgen_cuda",
 ]
 
 [[package]]
@@ -665,15 +644,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5efa2b3d7902f4b634a20cae3c9c4e6209dc4779feb6863329607560143efa70"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "cudarc"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9395df0cab995685664e79cc35ad6302bf08fb9c5d82301875a183affe1278b1"
-dependencies = [
- "half",
 ]
 
 [[package]]
@@ -1673,7 +1643,9 @@ dependencies = [
  "candle-transformers",
  "hf-hub",
  "indicatif 0.17.8",
+ "memmap2 0.9.4",
  "polars",
+ "rayon",
  "rust-bert",
  "safetensors 0.4.2",
  "serde_json",
@@ -2544,9 +2516,9 @@ checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
 name = "rayon"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4963ed1bc86e4f3ee217022bd855b297cef07fb9eac5dfa1f788b220b49b3bd"
+checksum = "b418a60154510ca1a002a752ca9714984e21e4241e804d32555251faf8b78ffa"
 dependencies = [
  "either",
  "rayon-core",
