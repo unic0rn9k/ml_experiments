@@ -222,7 +222,6 @@ pub fn main() -> Result<()>{
                 buffer.push(argmax(&row) as u32)
             }
             println!("{}", decode(&buffer));
-            println!("{}", decode(&ys[0].to_vec1().unwrap()));
         }
     }
 

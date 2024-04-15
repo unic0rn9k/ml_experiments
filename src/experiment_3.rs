@@ -9,7 +9,7 @@ pub fn main() -> Result<()>{
     let varmap = VarMap::new();
     let vs = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
 
-    let decoder = simple_llm(vs.clone());
+    let decoder = simple_llm(vs.clone(), 255);
 
     let embeddings = Var::randn(0f32, 1f32, (255, EMBD), &dev)?;
     

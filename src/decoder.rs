@@ -70,7 +70,14 @@ impl Module for DecoderBlock{
 }
 
 pub fn simple_llm(vs: VarBuilder, tkn: usize) -> impl Module{
-    (0..3).map(|n| seq().add(DecoderBlock::new(vs.pp(format!("decoder_block_{n}")), DecoderConfig::default()).unwrap()).add(|xs: &Tensor| xs.relu()))
+    let decoder = |n: usize| seq().add(DecoderBlock::new(vs.pp(format!("decoder_block_{n}")), DecoderConfig::default()).unwrap()).add(|xs: &Tensor| xs.relu());
+
+    (0..4).map(|n| {
+        let a = decoder(n);
+        let b = decoder(n);
+        let c = decoder(n);
+        move |xs: &Tensor| a.forward(xs).unwrap() + b.forward(xs).unwrap() + c.forward(xs).unwrap()
+    })
         .fold(seq(), |s, n| s.add(move |xs: &Tensor| (n.forward(xs) + xs).unwrap() * 0.5 ) )
         .add(linear(EMBD, tkn, vs.pp("output projection")).unwrap())
 }

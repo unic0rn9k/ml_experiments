@@ -33,8 +33,8 @@ impl<R: Read> Iterator for TokenizerStream<R>{
 
             let unk = |ret: &mut Vec<u32>|
             if ret.len() == 0 || ret[ret.len()-1] != 0 as u32 || ret[ret.len()-2] != 0{
-                ret.push(0);
-                ret.push(0);
+                //ret.push(0);
+                //ret.push(0);
             };
 
             let tok = |ret: &mut Vec<u32>, buffer: &String|{
