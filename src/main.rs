@@ -15,8 +15,8 @@ mod experiment_2;
 mod experiment_3;
 use decoder::*;
 
-const EMBD: usize = 100;
-const HEADD: usize = 300;
+const EMBD: usize = 64;
+const HEADD: usize = 32;
 const NHEADS: usize = 4;
 
 macro_rules! projects {

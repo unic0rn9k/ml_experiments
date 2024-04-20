@@ -8,8 +8,8 @@ use candle_nn::ops::log_softmax;
 use candle_nn::{*, ops::softmax};
 use candle_core::*;
 
-const EMBD: usize = 100;
-const HEADD: usize = 300;
+const EMBD: usize = 64;
+const HEADD: usize = 32;
 const NHEADS: usize = 4;
 
 pub mod decoder;

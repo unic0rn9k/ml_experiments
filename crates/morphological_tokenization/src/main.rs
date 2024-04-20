@@ -159,14 +159,33 @@ use candle_nn::ops::log_softmax;
 use candle_nn::{*, ops::softmax};
 use candle_core::*;
 
-const EMBD: usize = 100;
-const HEADD: usize = 300;
+const EMBD: usize = 64;
+const HEADD: usize = 32;
 const NHEADS: usize = 4;
+
+// # Performance
+// after 20 iterations: 4993
+// Naive 3 heads: 4188/41min
+// Relu on risidual stream: 4300/23min
+// 3980 - 2 hours 10min
+// smaller model: 3000/30sec
+
+pub fn pos_embeddings(n: usize) -> Tensor{
+    let mut tmp = vec![];
+
+    for y in 0..EMBD{
+        for x in 0..n{
+            tmp.push((y as f32 * x as f32).sin())
+        }
+    }
+
+    Tensor::from_vec(tmp, (1, n, EMBD), &Device::Cpu).unwrap()
+}
 
 pub fn main() -> Result<()>{
     let dev = Device::Cpu;
 
-    let batch_size = 40;
+    let batch_size = 30;
     let varmap = VarMap::new();
     let vs = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
 
@@ -193,7 +212,7 @@ pub fn main() -> Result<()>{
             ys.push(Tensor::new(&tokens[2..seqd+2], &dev)?);
             let toks = Tensor::new(&tokens[0..seqd], &dev)?;
 
-            xs.push(embeddings.as_tensor().embedding(&toks).unwrap().reshape((1, seqd, EMBD)).unwrap());
+            xs.push((embeddings.as_tensor().embedding(&toks).unwrap().reshape((1, seqd, EMBD)) + pos_embeddings(seqd)).unwrap());
         }
 
         if seqd < 2{
@@ -222,6 +241,9 @@ pub fn main() -> Result<()>{
                 buffer.push(argmax(&row) as u32)
             }
             println!("{}", decode(&buffer));
+            if n % 10 == 0{
+                varmap.save("bruh2.safetensors").unwrap();
+            }
         }
     }
 

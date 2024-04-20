@@ -4,7 +4,7 @@
 //! - [-] Batching
 //! - [ ] Multiple hheads
 
-use std::io::Read;
+use std::{io::Read, iter::repeat};
 
 use crate::*;
 
@@ -70,15 +70,16 @@ impl Module for DecoderBlock{
 }
 
 pub fn simple_llm(vs: VarBuilder, tkn: usize) -> impl Module{
-    let decoder = |n: usize| seq().add(DecoderBlock::new(vs.pp(format!("decoder_block_{n}")), DecoderConfig::default()).unwrap()).add(|xs: &Tensor| xs.relu());
+    println!("HEADD: {HEADD}, EMBD: {EMBD}");
+    let decoder = |n: usize| DecoderBlock::new(vs.pp(format!("decoder_block_{n}")), DecoderConfig::default()).unwrap();
 
     (0..4).map(|n| {
-        let a = decoder(n);
-        let b = decoder(n);
-        let c = decoder(n);
-        move |xs: &Tensor| a.forward(xs).unwrap() + b.forward(xs).unwrap() + c.forward(xs).unwrap()
+        let heads: Vec<_> = repeat_with(||decoder(n)).take(4).collect();
+
+        seq()
+            .add_fn(move |xs| (heads.iter().skip(1).map(|h| h.forward(xs).unwrap()).fold(heads[0].forward(xs), |l, r| l+r) ).unwrap().relu())
     })
-        .fold(seq(), |s, n| s.add(move |xs: &Tensor| (n.forward(xs) + xs).unwrap() * 0.5 ) )
+        .fold(seq(), |s, n| s.add(move |xs: &Tensor| n.forward(xs) + xs) )
         .add(linear(EMBD, tkn, vs.pp("output projection")).unwrap())
 }
 
