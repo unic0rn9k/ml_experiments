@@ -73,13 +73,16 @@ pub fn simple_llm(vs: VarBuilder, tkn: usize) -> impl Module{
     println!("HEADD: {HEADD}, EMBD: {EMBD}");
     let decoder = |n: usize| DecoderBlock::new(vs.pp(format!("decoder_block_{n}")), DecoderConfig::default()).unwrap();
 
-    (0..4).map(|n| {
+    (0..6).map(|n| {
         let heads: Vec<_> = repeat_with(||decoder(n)).take(4).collect();
 
-        seq()
-            .add_fn(move |xs| (heads.iter().skip(1).map(|h| h.forward(xs).unwrap()).fold(heads[0].forward(xs), |l, r| l+r) ).unwrap().relu())
+        seq().add_fn(move |xs| (heads.iter().skip(1).map(|h| h.forward(xs).unwrap()).fold(heads[0].forward(xs), |l, r| l+r) ).unwrap().relu())
     })
-        .fold(seq(), |s, n| s.add(move |xs: &Tensor| n.forward(xs) + xs) )
+        .fold(seq(), |s, n| s.add(move |xs: &Tensor| {
+            let ret = (n.forward(xs) + xs).unwrap();
+            let norm = ret.normalize_axis(-1).unwrap();
+            ret / norm as f64 
+        }))
         .add(linear(EMBD, tkn, vs.pp("output projection")).unwrap())
 }
 

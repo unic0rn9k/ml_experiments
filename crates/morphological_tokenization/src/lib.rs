@@ -11,15 +11,15 @@ pub static WORDS: Lazy<Vec<String>> = Lazy::new(||BufReader::new(File::open(TOP_
 pub static WORD_IDX: Lazy<HashMap<String, u32>> = Lazy::new(||SPECIAL_TOKENS.iter().map(|s|s.to_string()).chain(WORDS.iter().cloned()).enumerate().map(|(a,b)| (b,a as u32)).collect());
 pub static TOKENN: Lazy<u32> = Lazy::new(||(WORDS.len() as f32 + SPECIAL_TOKENS.len() as f32 + 2.).sqrt() as u32 + 1);
 
-pub struct TokenizerStream<R: Read>(Bytes<R>, Vec<u32>);
+pub struct TokenizerStream<R: Iterator<Item=char>>(R, Vec<u32>);
 
-impl<R: Read> TokenizerStream<R>{
+impl<R: Iterator<Item=char>> TokenizerStream<R>{
     pub fn new(text: R) -> Self{
-        Self(text.bytes(), vec![])
+        Self(text, vec![])
     }
 }
 
-impl<R: Read> Iterator for TokenizerStream<R>{
+impl<R: Iterator<Item=char>> Iterator for TokenizerStream<R>{
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -43,6 +43,9 @@ impl<R: Read> Iterator for TokenizerStream<R>{
                 }
 
                 if let Some(n) = WORD_IDX.get(buffer){
+                    if *n >= *TOKENN**TOKENN - SPECIAL_TOKENS.len() as u32{
+                        panic!("Token too large???")
+                    }
                     ret.push(n / *TOKENN);
                     ret.push(n % *TOKENN);
                 }else{
@@ -50,7 +53,7 @@ impl<R: Read> Iterator for TokenizerStream<R>{
                 }
             };
 
-            let c = self.0.next()?.expect("Failed when reading stream when tokenizing").to_ascii_lowercase() as char;
+            let c = self.0.next()?.to_ascii_lowercase() as char;
 
             if c.is_whitespace(){
                 tok(ret, &buffer);
@@ -103,11 +106,16 @@ pub fn decode(toks: &[u32]) -> String{
 
 #[test]
 fn the_quick_brown_fox(){
-    let text = &format!("jumped, over. the! lazy-brown dog. {} ", WORDS.iter().last().unwrap());
-    let toks: Vec<_> = TokenizerStream::new(text.as_bytes()).collect();
+    let text = File::open("/home/unic0rn9k/Documents/ml_experiments/bruh.txt").unwrap().bytes().map(|c| c.unwrap() as char).take(50000);
+
+    let toks: Vec<_> = TokenizerStream::new(text).collect();
     let dec = decode(&toks);
-    println!("{text:?}");
-    println!("{}", *TOKENN);
-    println!("{toks:?} {}", toks.len());
+    //println!("{text:?}");
+    //println!();
+    //println!("{}", *TOKENN);
+    //println!();
+    //println!("{toks:?} {}", toks.len());
+    //println!();
     println!("{dec:?}");
+    println!();
 }
