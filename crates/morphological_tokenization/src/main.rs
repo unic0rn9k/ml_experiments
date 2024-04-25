@@ -1,3 +1,5 @@
+mod init;
+
 use ml_experiments::decoder::simple_llm;
 use morphological_tokenization::*;
 use ml_experiments::*;
@@ -58,6 +60,11 @@ fn sample(model: &impl Module, n: usize, dev: &Device, embeddings: &Var) -> Stri
 }
 
 pub fn main() -> Result<()>{
+    if std::env::args().skip(1).next() == Some("init".into()){
+        init::main();
+        return Ok(());
+    }
+
     if std::env::args().skip(1).next() == Some("sample".into()){
         let dev = Device::Cpu;
         let mut varmap = VarMap::new();

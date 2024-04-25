@@ -1645,6 +1645,7 @@ dependencies = [
  "indicatif 0.17.8",
  "memmap2 0.9.4",
  "polars",
+ "rand",
  "rayon",
  "rust-bert",
  "safetensors 0.4.2",
