@@ -11,7 +11,7 @@ pub fn main(){
     let candidate_labels = &["emotionally positive", "logical", "a grammer word", "emotionally negative", "commanding", "polite", "scientific", "complicated", "simple", "dumb", "gendered", "an inanimate object"];
 
     let batch_size = 20;
-    let threads = 3;
+    let threads = 6;
     let samples_pr_thread = words.len() / threads;
     let mut handles = vec![];
 
@@ -25,7 +25,7 @@ pub fn main(){
 
     for n in 0..threads{
         let a = n * samples_pr_thread / batch_size;
-        let mut b = (n+1) * samples_pr_thread / batch_size;
+        let b = (n+1) * samples_pr_thread / batch_size;
         let words = words.clone();
         let pb = pb.clone();
 
@@ -46,11 +46,14 @@ pub fn main(){
                 }
 
                 ret.append(&mut model.predict_multilabel(
-                    &words[..b],
+                    &words[a..b],
                     candidate_labels,
                     Some(Box::new(|s|format!("The sample is {s}."))),
                     128,
                 ).unwrap());
+
+
+                pb.inc((b-a) as u64);
             }
 
 
@@ -74,7 +77,6 @@ pub fn main(){
         }
 
         writeln!(&mut file, "{ret}").unwrap();
-        pb.inc(1);
     }
     pb.finish();
 }
