@@ -6,13 +6,13 @@ use rand::{thread_rng, Rng};
 use crate::*;
 
 pub fn main(){
-    let idxs: Vec<usize> = repeat_with(|| thread_rng().gen_range(0..WORDS.len())).take(500).collect();
+    let idxs: Vec<usize> = repeat_with(|| thread_rng().gen_range(0..WORDS.len())).take(1500).collect();
     let words: Arc<Vec<&str>> = Arc::new(idxs.into_iter().map(|n|WORDS[n].as_str()).collect());
     let candidate_labels = &["emotionally positive", "logical", "a grammer word", "emotionally negative", "commanding", "polite", "scientific", "complicated", "simple", "dumb", "gendered", "an inanimate object"];
 
-    let threads = 1;
-    let batch_size = words.len() / threads;
-    let remainder = words.len() % threads;
+    let batch_size = 20;
+    let threads = 3;
+    let samples_pr_thread = words.len() / threads;
     let mut handles = vec![];
 
     let pb = ProgressBar::new(words.len() as u64);
@@ -24,29 +24,37 @@ pub fn main(){
     pb.tick();
 
     for n in 0..threads{
-        let a = n * batch_size;
-        let mut b = (n+1) * batch_size;
+        let a = n * samples_pr_thread / batch_size;
+        let mut b = (n+1) * samples_pr_thread / batch_size;
         let words = words.clone();
         let pb = pb.clone();
 
         handles.push(thread::spawn(move || {
-            if n == threads-1{b += remainder}
 
             let model = ZeroShotClassificationModel::new(Default::default()).unwrap();
 
             pb.println(format!("Processing {a}..{b}/{} on thread {n}", words.len()));
 
-            let classification = model.predict_multilabel(
-                &words[a..b],
-                candidate_labels,
-                //Some(Box::new(|s|format!("The sample is {s}."))),
-                None,
-                128,
-            ).unwrap();
+            let mut ret = vec![];
 
-            pb.println(format!("{}: {:.2} {}", words[0], classification[0][0].score, classification[0][0].text));
+            for i in a..b{
+                let a = i*batch_size;
+                let mut b = (i+1)*batch_size;
 
-            classification
+                if n == b-1 && n == threads-1{
+                    b += words.len() % (threads * batch_size);
+                }
+
+                ret.append(&mut model.predict_multilabel(
+                    &words[..b],
+                    candidate_labels,
+                    Some(Box::new(|s|format!("The sample is {s}."))),
+                    128,
+                ).unwrap());
+            }
+
+
+            ret
         }));
     }
 
