@@ -75,6 +75,7 @@ pub fn main() -> Result<()>{
         varmap.load("bruh6.safetensors").unwrap();
 
         println!("{}", sample(&decoder, 200, &dev, &embeddings));
+        return Ok(())
     }
 
     let dev = Device::Cpu;
@@ -88,7 +89,7 @@ pub fn main() -> Result<()>{
     let decoder = simple_llm(vs.clone(), *TOKENN as usize);
 
     let embeddings = Var::randn(0f32, 1f32, (*TOKENN as usize, EMBD), &dev)?;
-    let pos_embeddings: Vec<_> = repeat_with(|| Var::randn(0f32, 1f32, (1, 1, EMBD), &dev).unwrap() ).collect();
+    let pos_embeddings: Vec<_> = repeat_with(|| Var::randn(0f32, 1f32, (1, 1, EMBD), &dev).unwrap() ).take(100).collect();
     //let target_embeddings = Var::randn(0f32, 1f32, (1, 2, EMBD), &dev)?;
     
     let mut vars = varmap.all_vars();
@@ -119,8 +120,9 @@ pub fn main() -> Result<()>{
 
             ys.push(Tensor::new(&tokens[2..seqd+2], &dev)?);
 
-            let toks = Tensor::new(&tokens[0..seqd-2], &dev)?;
-            let pos_embeddings = Tensor::cat(&pos_embeddings[0..seqd], D::Minus2).unwrap();
+            let toks = Tensor::new(&tokens[0..seqd], &dev)?;
+            let poss = &pos_embeddings[pos_embeddings.len()-seqd..pos_embeddings.len()-(seqd%2)];
+            let pos_embeddings = Tensor::cat(poss, D::Minus2).unwrap();
             let toks = ( embeddings.as_tensor().embedding(&toks).unwrap().reshape((1, seqd, EMBD)) + pos_embeddings).unwrap();
 
             xs.push(toks);
